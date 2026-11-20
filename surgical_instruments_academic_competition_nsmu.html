@@ -1,0 +1,2091 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Хирургические инструменты — Тренажер</title>
+<!-- Библиотеки для распаковки PPTX (JSZip) и чтения PDF (PDF.js) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  :root {
+    --bg: #f4f7f6;
+    --card: #ffffff;
+    --primary: #0f766e;
+    --primary-hover: #115e59;
+    --primary-soft: #ccfbf1;
+    --success: #16a34a;
+    --danger: #dc2626;
+    --warning: #d97706;
+    --text: #1e293b;
+    --muted: #64748b;
+    --border: #e2e8f0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+  body { background: var(--bg); color: var(--text); line-height: 1.5; padding-bottom: 40px; }
+  header { background: var(--card); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50; }
+  .nav-container { max-width: 1100px; margin: 0 auto; padding: 12px 16px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+  .logo { font-weight: 800; font-size: 1.2rem; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+  .badge { font-size: 0.78rem; padding: 3px 8px; border-radius: 99px; background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tab-btn { border: 1px solid var(--border); background: var(--bg); color: var(--text); padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: 0.15s; }
+  .tab-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .container { max-width: 1100px; margin: 20px auto; padding: 0 16px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .col { flex: 1; min-width: 240px; }
+  select, input[type="text"], textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; background: #fff; color: var(--text); }
+  select:focus, input[type="text"]:focus, textarea:focus { outline: 2px solid var(--primary-soft); border-color: var(--primary); }
+  .btn { padding: 10px 16px; border-radius: 8px; border: none; font-weight: 600; font-size: 0.92rem; cursor: pointer; background: var(--primary); color: #fff; transition: 0.15s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; }
+  .btn:hover { background: var(--primary-hover); }
+  .btn-sec { background: #e2e8f0; color: var(--text); }
+  .btn-sec:hover { background: #cbd5e1; }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-success:hover { background: #15803d; }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-danger:hover { background: #b91c1c; }
+  .btn-warning { background: var(--warning); color: #fff; }
+  .btn-warning:hover { background: #b45309; }
+  .btn-sm { padding: 5px 10px; font-size: 0.8rem; border-radius: 6px; }
+  .stats-bar { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; justify-content: space-between; font-size: 0.9rem; color: var(--muted); margin-bottom: 12px; }
+  .stats-bar b { color: var(--text); }
+  .mistakes-drawer { background: #fff1f2; border: 1px solid #fecdd3; border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+  .mistake-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 10px; background: #fff; border: 1px solid var(--border); border-radius: 6px; margin-top: 6px; font-size: 0.88rem; }
+
+  /* Режим просмотра карточек (справочник) */
+  .browse-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 14px; padding: 10px 12px; background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; }
+  .browse-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .browse-card { border: 1px solid var(--border); border-radius: 12px; background: #fff; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+  .browse-img-wrap { background: #0f172a; aspect-ratio: 4/3; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .browse-img-wrap img { width: 100%; height: 100%; object-fit: contain; cursor: zoom-in; }
+  .browse-no-img { color: #94a3b8; font-size: 0.85rem; padding: 16px; text-align: center; }
+  .browse-body { padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+  .browse-cat { font-size: 0.76rem; color: var(--primary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
+  .browse-ru { font-weight: 700; font-size: 0.98rem; color: var(--text); }
+  .browse-note { font-size: 0.85rem; color: var(--muted); }
+
+  /* Сетка выбора из 3 картинок */
+  .quiz-title { font-size: 1.4rem; font-weight: 800; text-align: center; margin: 12px 0 6px; color: var(--text); }
+  .quiz-subtitle { text-align: center; color: var(--muted); font-size: 0.92rem; margin-bottom: 16px; }
+  .img-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-bottom: 16px; }
+  .img-choice { border: 3px solid var(--border); border-radius: 12px; overflow: hidden; background: #0f172a; cursor: pointer; position: relative; aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; transition: 0.15s; }
+  .img-choice:hover { border-color: var(--primary); transform: translateY(-2px); }
+  .img-choice.correct { border-color: var(--success); box-shadow: 0 0 0 4px rgba(22,163,74,0.2); }
+  .img-choice.wrong { border-color: var(--danger); opacity: 0.65; }
+  .img-choice img { width: 100%; height: 100%; object-fit: contain; }
+  .zoom-btn { position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.65); color: #fff; border: none; border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; cursor: pointer; }
+
+  /* Блок проверки названия */
+  .answer-box { max-width: 680px; margin: 16px auto 0; padding: 16px; border-radius: 10px; background: #f8fafc; border: 1px solid var(--border); }
+  .mc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  @media (max-width: 600px) { .mc-grid { grid-template-columns: 1fr; } }
+  .mc-btn { padding: 12px; border: 2px solid var(--border); background: #fff; border-radius: 8px; font-weight: 600; cursor: pointer; text-align: left; color: var(--text); font-size: 0.95rem; }
+  .mc-btn:hover { border-color: var(--primary); }
+  .mc-btn.correct { background: #dcfce7; border-color: var(--success); color: #14532d; }
+  .mc-btn.wrong { background: #fee2e2; border-color: var(--danger); color: #7f1d1d; }
+  .feedback { margin-top: 12px; padding: 12px; border-radius: 8px; font-weight: 600; }
+  .feedback.ok { background: #dcfce7; color: #14532d; }
+  .feedback.err { background: #fee2e2; color: #7f1d1d; }
+
+  /* Редактор добровольца */
+  .editor-layout { display: grid; grid-template-columns: 330px 1fr; gap: 16px; }
+  @media (max-width: 850px) { .editor-layout { grid-template-columns: 1fr; } }
+  .struct-list { max-height: 520px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; margin-top: 10px; }
+  .struct-item { padding: 10px 12px; border-bottom: 1px solid var(--border); cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 0.9rem; }
+  .struct-item:hover { background: #f1f5f9; }
+  .struct-item.active { background: var(--primary-soft); font-weight: 600; }
+  .status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .dot-yes { background: var(--success); }
+  .dot-no { background: #cbd5e1; }
+  .field-label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; }
+
+  .canvas-wrap { background: #0f172a; border-radius: 10px; overflow: hidden; display: flex; justify-content: center; align-items: center; min-height: 320px; position: relative; border: 2px dashed #475569; }
+  canvas { max-width: 100%; max-height: 520px; touch-action: none; cursor: crosshair; }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .tool-btn { padding: 8px 12px; border-radius: 8px; border: 2px solid var(--border); background: #fff; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
+  .tool-btn.active { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); }
+  .style-panel { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; }
+  .swatch { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #cbd5e1; cursor: pointer; transition: 0.15s; display: inline-block; }
+  .swatch:hover, .swatch.active { transform: scale(1.18); border-color: #1e293b; }
+  .media-strip { display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; margin-top: 8px; }
+  .media-thumb { height: 80px; border: 2px solid var(--border); border-radius: 6px; cursor: pointer; flex-shrink: 0; }
+  .media-thumb:hover { border-color: var(--primary); }
+  .hidden { display: none !important; }
+
+  /* Интерактивная лупа */
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; overflow: hidden; user-select: none; touch-action: none; }
+  .zoom-viewport { width: 96vw; height: 84vh; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+  #zoomImg { max-width: 92vw; max-height: 82vh; border-radius: 8px; transform-origin: center center; transition: transform 0.05s linear; will-change: transform; }
+  .zoom-controls { position: fixed; top: 14px; right: 16px; display: flex; gap: 8px; z-index: 120; }
+  .zoom-hint { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: #fff; padding: 6px 14px; border-radius: 99px; font-size: 0.82rem; pointer-events: none; z-index: 120; white-space: nowrap; }
+  .scroll-top-btn { position: fixed; right: 16px; bottom: 20px; z-index: 60; padding: 10px 14px; border-radius: 99px; border: none; background: var(--primary); color: #fff; font-weight: 700; font-size: 0.88rem; cursor: pointer; box-shadow: 0 4px 14px rgba(15,118,110,0.35); transition: 0.15s; }
+  .scroll-top-btn:hover { background: var(--primary-hover); transform: translateY(-2px); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav-container">
+    <div class="logo">
+      <span>Хирургические инструменты</span>
+      <span id="cloudBadge" class="badge">Локальный режим</span>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('quiz')">Тренажер</button>
+      <button class="tab-btn" onclick="switchTab('editor')">Редактор для добровольцев</button>
+      <button class="tab-btn" onclick="switchTab('cloud')">Облако и Скачивание HTML</button>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <!-- ВКЛАДКА 1: ТРЕНАЖЕР И СПРАВОЧНИК -->
+  <div id="tab-quiz">
+    <div class="card">
+      <div class="row">
+        <div class="col">
+          <label class="field-label">Группа инструментов</label>
+          <select id="quizCategory" onchange="startNextQuestion()"></select>
+        </div>
+        <div class="col">
+          <label class="field-label">Режим</label>
+          <select id="quizFilter" onchange="startNextQuestion()">
+            <option value="browse">Просмотр карточек (справочник)</option>
+            <option value="show">Покажи инструмент (название → 3 фото)</option>
+            <option value="name">Назови инструмент (1 фото → название)</option>
+            <option value="mistakes">Работа над ошибками</option>
+          </select>
+        </div>
+        <div class="col" id="nameModeCol">
+          <label class="field-label">Способ проверки названия</label>
+          <select id="nameMode" onchange="renderNameStep()">
+            <option value="input">Ввод с клавиатуры</option>
+            <option value="mc">Выбор из 4 вариантов</option>
+            <option value="flash">Быстрая самопроверка (Показать ответ)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="quizArena">
+      <div class="stats-bar">
+        <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+          <span>Отвечено верно: <b id="statCorrect">0</b></span>
+          <span>Ошибок: <b id="statWrong">0</b></span>
+          <span>С фото в группе: <b id="statWithPhoto">0</b></span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="toggleMistakesDrawerBtn" class="btn btn-sec btn-sm" onclick="toggleMistakesDrawer()">📋 Список ошибок (0)</button>
+        </div>
+      </div>
+      <div id="mistakesDrawer" class="mistakes-drawer hidden"></div>
+      <div id="quizContent"></div>
+    </div>
+  </div>
+
+  <!-- ВКЛАДКА 2: РЕДАКТОР ДЛЯ ДОБРОВОЛЬЦЕВ -->
+  <div id="tab-editor" class="hidden">
+    <div class="editor-layout">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+          <h3>Инструменты (<span id="progressCount">0 / 0</span>)</h3>
+          <button class="btn btn-sm" id="btnNewInstrument" onclick="startNewInstrument()">➕ Добавить</button>
+        </div>
+        <select id="edCategory" onchange="renderEditorList()" style="margin-bottom:8px"></select>
+        <div class="row" style="margin-bottom:8px">
+          <input type="text" id="edSearch" placeholder="Поиск по названию..." oninput="renderEditorList()">
+        </div>
+        <select id="edStatusFilter" onchange="renderEditorList()">
+          <option value="all">Все инструменты</option>
+          <option value="missing">Только БЕЗ фото</option>
+          <option value="done">Только С фото</option>
+        </select>
+        <div class="struct-list" id="structList"></div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+          <span id="edModeBadge" class="badge">Новый инструмент</span>
+          <span id="edValidationMsg" style="font-size:0.84rem;color:var(--danger);font-weight:600"></span>
+        </div>
+
+        <div class="row" style="margin-bottom:10px">
+          <div class="col">
+            <label class="field-label">Название инструмента *</label>
+            <input type="text" id="edItemRu" placeholder="Например: Зажим кровоостанавливающий Кохера прямой">
+          </div>
+          <div class="col">
+            <label class="field-label">Группа (категория)</label>
+            <input type="text" id="edItemCat" list="categorySuggestions" placeholder="Например: Зажимные">
+            <datalist id="categorySuggestions"></datalist>
+          </div>
+        </div>
+
+        <div style="margin-bottom:12px">
+          <label class="field-label">Примечание / назначение (необязательно)</label>
+          <input type="text" id="edItemNote" placeholder="Например: Имеет зубчики на концах браншей, для захвата плотных тканей">
+        </div>
+
+        <div class="card" style="background:#f8fafc;padding:12px;margin-bottom:12px">
+          <div class="row">
+            <label class="btn btn-sec" style="cursor:pointer">
+              📷 Загрузить фото / картинку
+              <input type="file" accept="image/*" style="display:none" onchange="handleImageUpload(event)">
+            </label>
+            <label class="btn btn-sec" style="cursor:pointer">
+              📊 Извлечь картинки из .PPTX
+              <input type="file" accept=".pptx" style="display:none" onchange="handlePptxUpload(event)">
+            </label>
+            <label class="btn btn-sec" style="cursor:pointer">
+              📄 Открыть страницы .PDF
+              <input type="file" accept=".pdf" style="display:none" onchange="handlePdfUpload(event)">
+            </label>
+            <span style="font-size:0.8rem;color:var(--muted)">Или нажмите <b>Ctrl+V</b>, чтобы вставить скриншот</span>
+          </div>
+
+          <div id="extractedBox" class="hidden" style="margin-top:10px">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+              <span id="extractedTitle" style="font-size:0.82rem;font-weight:700;color:var(--primary)">Извлеченные кадры (кликните, чтобы взять в редактор):</span>
+              <div id="pdfPager" class="hidden" style="display:flex;gap:6px;align-items:center">
+                <button class="btn btn-sec btn-sm" onclick="changePdfPage(-1)">◀</button>
+                <span id="pdfPageInfo" style="font-size:0.82rem;font-weight:600">1 / 1</span>
+                <button class="btn btn-sec btn-sm" onclick="changePdfPage(1)">▶</button>
+                <button class="btn btn-sm" onclick="takeCurrentPdfPage()">Взять эту страницу</button>
+              </div>
+            </div>
+            <div class="media-strip" id="mediaStrip"></div>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <button class="tool-btn active" id="tool-blackbox" onclick="setTool('blackbox')">⬛ Замазать (плашка)</button>
+          <button class="tool-btn" id="tool-blackpen" onclick="setTool('blackpen')">🖊️ Маркер</button>
+          <button class="tool-btn" id="tool-eraser" onclick="setTool('eraser')">🧹 Ластик</button>
+          <button class="tool-btn" id="tool-line" onclick="setTool('line')">📏 Прямая линия</button>
+          <button class="tool-btn" id="tool-circle" onclick="setTool('circle')">⭕ Кружок</button>
+          <button class="tool-btn" id="tool-arrow" onclick="setTool('arrow')">↗️ Стрелка</button>
+          <button class="tool-btn" onclick="undoCanvas()">↩️ Шаг назад</button>
+          <button class="tool-btn" onclick="clearAnnotations()">🗑️ Сбросить пометки</button>
+        </div>
+
+        <div class="style-panel" id="editorStylePanel">
+          <div id="colorControlWrap" style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:0.84rem;font-weight:700;color:var(--text)">Цвет:</span>
+            <input type="color" id="toolColorInput" onchange="onToolStyleChange()" style="width:34px;height:30px;border:none;cursor:pointer;background:none">
+            <div style="display:flex;gap:5px;align-items:center" id="colorSwatches">
+              <span class="swatch" style="background:#00e5ff" title="Голубой" onclick="pickSwatch('#00e5ff')"></span>
+              <span class="swatch" style="background:#facc15" title="Желтый" onclick="pickSwatch('#facc15')"></span>
+              <span class="swatch" style="background:#22c55e" title="Зеленый" onclick="pickSwatch('#22c55e')"></span>
+              <span class="swatch" style="background:#ffffff" title="Белый" onclick="pickSwatch('#ffffff')"></span>
+              <span class="swatch" style="background:#ef4444" title="Красный" onclick="pickSwatch('#ef4444')"></span>
+              <span class="swatch" style="background:#000000" title="Черный" onclick="pickSwatch('#000000')"></span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:200px">
+            <span style="font-size:0.84rem;font-weight:700;color:var(--text)">Толщина:</span>
+            <input type="range" id="toolWidthInput" min="1" max="50" oninput="onToolStyleChange()" style="flex:1;cursor:pointer">
+            <span id="toolWidthLabel" style="font-size:0.84rem;font-weight:700;min-width:44px">4 px</span>
+          </div>
+          <button class="btn btn-sec btn-sm" onclick="resetToolSettingsToDefault()">🔄 По умолчанию</button>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas id="edCanvas" width="700" height="460"></canvas>
+        </div>
+
+        <div class="row" style="margin-top:14px;justify-content:space-between">
+          <button class="btn btn-success" id="saveCardBtn" onclick="saveCurrentCard()">💾 Сохранить карточку (в базу и облако)</button>
+          <div class="row" style="gap:8px">
+            <button class="btn btn-sec" id="deletePhotoBtn" onclick="deleteCurrentPhoto()">Убрать фото</button>
+            <button class="btn btn-danger" id="deleteItemBtn" onclick="openDeleteItemModal()">🗑️ Удалить инструмент</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ВКЛАДКА 3: ОБЛАКО И СКАЧИВАНИЕ HTML -->
+  <div id="tab-cloud" class="hidden">
+    <div class="card">
+      <h3>☁️ Бесплатное облако для совместной работы добровольцев (Firebase)</h3>
+      <p style="font-size:0.9rem;color:var(--muted);margin:6px 0 12px">
+        Вставьте ссылку на Realtime Database отдельного проекта Firebase (вида <code>https://ваш-проект-default-rtdb.europe-west1.firebasedatabase.app</code>). Все инструменты и фото будут синхронизироваться у всей группы.
+      </p>
+      <div class="row">
+        <input type="text" id="firebaseUrlInput" placeholder="https://surgery-default-rtdb.europe-west1.firebasedatabase.app" style="flex:1">
+        <button class="btn" onclick="connectFirebase()">Подключить и синхронизировать</button>
+        <button class="btn btn-sec" onclick="copyVolunteerLink()">🔗 Скопировать ссылку для добровольцев</button>
+      </div>
+      <div id="cloudStatusMsg" style="margin-top:8px;font-size:0.88rem;color:var(--success);font-weight:600"></div>
+    </div>
+
+    <div class="card">
+      <h3>📥 Автономный режим и резервные копии</h3>
+      <p style="font-size:0.9rem;color:var(--muted);margin:6px 0 14px">
+        Вы в любой момент можете скачать весь этот сайт вместе со всеми добавленными инструментами и фотографиями в один файл <b>index.html</b>. Он откроется на телефоне и ПК даже без интернета.
+      </p>
+      <div class="row">
+        <button class="btn btn-success" onclick="downloadStandaloneHtml()">⬇️ Скачать готовый сайт со всеми фото (.HTML)</button>
+        <button class="btn btn-sec" onclick="exportJsonBackup()">📦 Экспорт базы (.JSON)</button>
+        <label class="btn btn-sec" style="cursor:pointer">
+          📂 Загрузить пакет (.JSON)
+          <input type="file" accept=".json" style="display:none" onchange="importJsonBackup(event)">
+        </label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>➕ Массовое добавление списка инструментов</h3>
+      <p style="font-size:0.88rem;color:var(--muted);margin:6px 0 10px">
+        Каждый инструмент с новой строки. Поддерживаются форматы:<br>
+        <code>Группа | Название инструмента | Примечание</code><br>
+        <code>Группа | Название инструмента</code><br>
+        <code>Название инструмента</code> (добавится в выбранную в редакторе группу или в «Общие»).
+      </p>
+      <textarea id="bulkInput" rows="6" placeholder="Режущие | Скальпель брюшистый | Для длинных линейных разрезов&#10;Зажимные | Зажим кровоостанавливающий Кохера&#10;Пинцет хирургический"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" onclick="importBulkText()">Добавить инструменты в базу</button>
+        <span id="bulkStatusMsg" style="font-size:0.88rem;color:var(--success);font-weight:600"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Интерактивная лупа -->
+<div id="zoomModal" class="modal hidden">
+  <div class="zoom-controls">
+    <button class="btn btn-sec btn-sm" onclick="stepZoom(0.6)">➕ Приблизить</button>
+    <button class="btn btn-sec btn-sm" onclick="stepZoom(-0.6)">➖ Отдалить</button>
+    <button class="btn btn-sec btn-sm" onclick="resetZoomTransform()">100%</button>
+    <button class="btn btn-danger btn-sm" onclick="closeZoomModal()">✕ Закрыть</button>
+  </div>
+  <div class="zoom-viewport" id="zoomViewport">
+    <img id="zoomImg" src="" alt="Увеличенное фото" draggable="false">
+  </div>
+  <div class="zoom-hint">ПК: клик лупой или колесико — приблизить, зажать мышь — перетащить • Мобильные: 2 пальца / двойной тап</div>
+</div>
+
+<!-- Подтверждение несохраненных изменений в редакторе -->
+<div id="unsavedModal" class="modal hidden" style="background:rgba(15,23,42,0.65);z-index:150" onclick="if(event.target===this)resolveUnsavedModal('stay')">
+  <div class="card" style="max-width:460px;width:100%;margin:0;box-shadow:0 12px 32px rgba(0,0,0,0.25)">
+    <h3 style="margin-bottom:8px;font-size:1.1rem">Несохранённые изменения</h3>
+    <p style="font-size:0.92rem;color:var(--muted);margin-bottom:16px">
+      В текущей карточке есть несохранённые правки. Что сделать перед переходом?
+    </p>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-success" onclick="resolveUnsavedModal('save')">💾 Сохранить изменения и перейти</button>
+      <button class="btn btn-danger" onclick="resolveUnsavedModal('discard')">🗑️ Отменить изменения и перейти</button>
+      <button class="btn btn-sec" onclick="resolveUnsavedModal('stay')">↩️ Остаться</button>
+    </div>
+  </div>
+</div>
+
+<!-- Подтверждение очистки списка ошибок -->
+<div id="clearMistakesModal" class="modal hidden" style="background:rgba(15,23,42,0.65);z-index:150" onclick="if(event.target===this)closeClearMistakesModal()">
+  <div class="card" style="max-width:460px;width:100%;margin:0;box-shadow:0 12px 32px rgba(0,0,0,0.25)">
+    <h3 style="margin-bottom:8px;font-size:1.1rem">Очистить список ошибок?</h3>
+    <p style="font-size:0.92rem;color:var(--muted);margin-bottom:16px">
+      Все инструменты будут удалены из списка ошибок, а счётчики текущей сессии обнулятся.
+    </p>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-danger" onclick="clearAllMistakes()">🗑️ Очистить список ошибок</button>
+      <button class="btn btn-sec" onclick="closeClearMistakesModal()">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<!-- Подтверждение удаления инструмента -->
+<div id="deleteItemModal" class="modal hidden" style="background:rgba(15,23,42,0.65);z-index:150" onclick="if(event.target===this)closeDeleteItemModal()">
+  <div class="card" style="max-width:460px;width:100%;margin:0;box-shadow:0 12px 32px rgba(0,0,0,0.25)">
+    <h3 style="margin-bottom:8px;font-size:1.1rem">Удалить инструмент?</h3>
+    <p id="deleteItemModalText" style="font-size:0.92rem;color:var(--muted);margin-bottom:16px"></p>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-danger" onclick="confirmDeleteCurrentItem()">🗑️ Да, удалить из базы и облака</button>
+      <button class="btn btn-sec" onclick="closeDeleteItemModal()">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<!-- Кнопка «Наверх» -->
+<button id="scrollTopBtn" class="scroll-top-btn hidden" onclick="scrollToTop()">⬆️ Наверх</button>
+
+<script>
+// === 1. БАЗА ИНСТРУМЕНТОВ И ССЫЛКА НА FIREBASE ===
+/*__DB_START__*/
+const SAVED_FIREBASE_URL = "https://surg-instr-acad-comp-nsmu-default-rtdb.europe-west1.firebasedatabase.app";
+const INITIAL_COMPACT_DB = {};
+/*__DB_END__*/
+
+const DEFAULT_CATEGORIES = [
+  "Режущие (разъединение тканей)",
+  "Зажимные (кровоостанавливающие и фиксационные)",
+  "Расширяющие и оттесняющие",
+  "Зондирующие и вспомогательные",
+  "Для соединения тканей (шовные)",
+  "Костные",
+  "Специальные"
+];
+
+// === 2. СОСТОЯНИЕ И ИНИЦИАЛИЗАЦИЯ ===
+let items = [];
+let mistakes = new Set(JSON.parse(localStorage.getItem('surg_mistakes_v1') || '[]'));
+let firebaseUrl = ((typeof SAVED_FIREBASE_URL !== 'undefined' && SAVED_FIREBASE_URL) || localStorage.getItem('surg_fb_url_v1') || '').trim().replace(/\/+$/, '');
+let statCorrect = 0, statWrong = 0;
+let currentQuizItem = null, currentChoices = [], quizQuestionAnswered = false, showHadWrongAttempt = false, lastAnswerWrong = false;
+let activeTab = 'quiz';
+let currentEdId = '__NEW__';
+let pendingEdAction = null;
+let pendingTab = null;
+let edBaseChanged = false;
+let edSavedShapesJson = '[]';
+let browseSearch = '';
+let mistakesSearch = '';
+let isVolunteer = false;
+
+const DEFAULT_TOOL_SETTINGS = {
+  blackbox: { color: '#000000', width: 18 },
+  blackpen: { color: '#000000', width: 18 },
+  eraser:   { color: '#000000', width: 20 },
+  line:     { color: '#ef4444', width: 4 },
+  circle:   { color: '#ef4444', width: 4 },
+  arrow:    { color: '#ef4444', width: 4 }
+};
+
+function escHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function loadToolSettings() {
+  const res = {};
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem('surg_tool_settings_v1') || '{}'); } catch (e) {}
+  for (const [k, def] of Object.entries(DEFAULT_TOOL_SETTINGS)) {
+    res[k] = Object.assign({}, def, (saved && typeof saved[k] === 'object' && saved[k]) ? saved[k] : {});
+  }
+  return res;
+}
+let toolSettings = loadToolSettings();
+
+function initDatabase() {
+  // 1) Загружаем встроенные в HTML карточки (если файл был экспортирован автономно)
+  const embeddedItems = [];
+  let idx = 1;
+  for (const [cat, list] of Object.entries(INITIAL_COMPACT_DB)) {
+    for (const row of list) {
+      embeddedItems.push({
+        id: 'inst_init_' + (idx++),
+        cat,
+        ru: row[0],
+        note: row[1] || '',
+        img: row[2] || null,
+        createdAt: idx
+      });
+    }
+  }
+
+  // 2) Загружаем локальный кэш
+  let localItems = [];
+  const saved = localStorage.getItem('surg_items_v1');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) localItems = parsed;
+    } catch (e) {}
+  }
+
+  if (localItems.length) {
+    items = localItems;
+    // Доливаем встроенные, если их нет локально
+    for (const emb of embeddedItems) {
+      const exists = items.some(i => i.cat === emb.cat && i.ru.trim().toLowerCase() === emb.ru.trim().toLowerCase());
+      if (!exists) items.push(emb);
+    }
+  } else {
+    items = embeddedItems;
+  }
+
+  // Разделение доступа строго по ссылке (?db=... или ?edit=1)
+  const urlParams = new URLSearchParams(window.location.search);
+  isVolunteer = window.location.search.includes('db=') || window.location.search.includes('edit=1');
+
+  if (urlParams.get('db')) {
+    firebaseUrl = urlParams.get('db').trim().replace(/\/+$/, '');
+    localStorage.setItem('surg_fb_url_v1', firebaseUrl);
+  }
+
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const cloudCards = document.querySelectorAll('#tab-cloud .card');
+  if (!isVolunteer) {
+    if (tabBtns[1]) tabBtns[1].style.display = 'none';
+    if (tabBtns[2]) tabBtns[2].textContent = 'Скачать сайт';
+    if (cloudCards[0]) cloudCards[0].style.display = 'none';
+    if (cloudCards[2]) cloudCards[2].style.display = 'none';
+    if (cloudCards[1]) cloudCards[1].querySelectorAll('.btn-sec').forEach(b => b.style.display = 'none');
+  } else {
+    if (tabBtns[1]) tabBtns[1].style.display = '';
+    if (tabBtns[2]) tabBtns[2].textContent = 'Облако и Скачивание HTML';
+    if (cloudCards[0]) cloudCards[0].style.display = '';
+    if (cloudCards[2]) cloudCards[2].style.display = '';
+    if (cloudCards[1]) cloudCards[1].querySelectorAll('.btn-sec').forEach(b => b.style.display = '');
+  }
+
+  saveLocal();
+  setupInteractiveZoom();
+  populateCategorySelects();
+  setTool(currentTool);
+  if (items.length) {
+    applySelectItemForEdit(items[0].id);
+  } else {
+    applyNewInstrumentForm();
+  }
+  renderEditorList();
+  switchTab('quiz');
+
+  if (firebaseUrl) {
+    const inp = document.getElementById('firebaseUrlInput');
+    if (inp) inp.value = firebaseUrl;
+    syncFromFirebase(false);
+  }
+}
+
+function saveLocal() {
+  try { localStorage.setItem('surg_items_v1', JSON.stringify(items)); } catch (e) {}
+  // Очищаем ошибки от несуществующих id
+  const validIds = new Set(items.map(i => i.id));
+  let changed = false;
+  for (const id of [...mistakes]) {
+    if (!validIds.has(id)) { mistakes.delete(id); changed = true; }
+  }
+  if (changed) localStorage.setItem('surg_mistakes_v1', JSON.stringify([...mistakes]));
+  updateMistakesOption();
+}
+
+function populateCategorySelects() {
+  const cats = [...new Set(items.map(i => i.cat).filter(Boolean))];
+  const qSel = document.getElementById('quizCategory');
+  const eSel = document.getElementById('edCategory');
+  const prevQ = qSel.value || 'ALL';
+  const prevE = eSel.value || 'ALL';
+
+  qSel.innerHTML = `<option value="ALL">Все группы (${items.length})</option>` +
+    cats.map(c => `<option value="${escHtml(c)}">${escHtml(c)} (${items.filter(i => i.cat === c).length})</option>`).join('');
+  eSel.innerHTML = `<option value="ALL">Все группы</option>` +
+    cats.map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join('');
+
+  if ([...qSel.options].some(o => o.value === prevQ)) qSel.value = prevQ;
+  if ([...eSel.options].some(o => o.value === prevE)) eSel.value = prevE;
+
+  // Обновляем datalist подсказок категорий
+  const dl = document.getElementById('categorySuggestions');
+  if (dl) {
+    const allSuggestions = [...new Set([...cats, ...DEFAULT_CATEGORIES])];
+    dl.innerHTML = allSuggestions.map(c => `<option value="${escHtml(c)}"></option>`).join('');
+  }
+  updateMistakesOption();
+}
+
+function updateMistakesOption() {
+  const btn = document.getElementById('toggleMistakesDrawerBtn');
+  if (btn) btn.textContent = `📋 Список ошибок (${mistakes.size})`;
+  renderMistakesDrawer();
+}
+
+function toggleMistakesDrawer() {
+  const d = document.getElementById('mistakesDrawer');
+  if (!d) return;
+  d.classList.toggle('hidden');
+  renderMistakesDrawer();
+}
+
+function renderMistakesDrawer() {
+  const d = document.getElementById('mistakesDrawer');
+  if (!d || d.classList.contains('hidden')) return;
+  const errItems = items.filter(i => mistakes.has(i.id));
+  if (!errItems.length) {
+    d.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-weight:600;color:var(--muted)">Список ошибок пуст — все инструменты отвечены верно!</span>
+      <button class="btn btn-sec btn-sm" onclick="toggleMistakesDrawer()">Закрыть</button>
+    </div>`;
+    return;
+  }
+  d.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+      <b style="color:#9f1239">Ошибки (${errItems.length}):</b>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-danger btn-sm" onclick="openClearMistakesModal()">🗑️ Очистить список ошибок</button>
+        <button class="btn btn-sec btn-sm" onclick="toggleMistakesDrawer()">Скрыть</button>
+      </div>
+    </div>
+    <input type="text" id="mistakesSearchInput" value="${escHtml(mistakesSearch)}" placeholder="Поиск по списку ошибок..." oninput="mistakesSearch=this.value;updateMistakesList()" style="margin-bottom:8px">
+    <div id="mistakesListContainer" style="max-height:220px;overflow-y:auto"></div>
+  `;
+  updateMistakesList();
+}
+
+function updateMistakesList() {
+  const listBox = document.getElementById('mistakesListContainer');
+  if (!listBox) return;
+  const q = mistakesSearch.toLowerCase().trim();
+  const filtered = items.filter(i => {
+    if (!mistakes.has(i.id)) return false;
+    if (q && !i.ru.toLowerCase().includes(q) && !(i.cat || '').toLowerCase().includes(q)) return false;
+    return true;
+  });
+  if (!filtered.length) {
+    listBox.innerHTML = `<div style="text-align:center;padding:12px;color:var(--muted);font-size:0.88rem">По запросу ничего не найдено</div>`;
+    return;
+  }
+  listBox.innerHTML = filtered.map(it => `
+    <div class="mistake-row">
+      <span><b>${escHtml(it.ru)}</b> <span style="color:var(--muted);font-size:0.82rem">(${escHtml(it.cat)})</span></span>
+      <button class="btn btn-sec btn-sm" onclick="removeSingleMistake('${it.id}')">✕ Убрать</button>
+    </div>
+  `).join('');
+}
+
+function removeSingleMistake(id) {
+  mistakes.delete(id);
+  localStorage.setItem('surg_mistakes_v1', JSON.stringify([...mistakes]));
+  updateMistakesOption();
+  if (document.getElementById('quizFilter').value === 'mistakes') startNextQuestion();
+}
+
+function openClearMistakesModal() {
+  document.getElementById('clearMistakesModal').classList.remove('hidden');
+}
+
+function closeClearMistakesModal() {
+  document.getElementById('clearMistakesModal').classList.add('hidden');
+}
+
+function clearAllMistakes() {
+  closeClearMistakesModal();
+  mistakes.clear();
+  mistakesSearch = '';
+  statCorrect = 0;
+  statWrong = 0;
+  localStorage.setItem('surg_mistakes_v1', '[]');
+  updateStatsUI();
+  if (document.getElementById('quizFilter').value === 'mistakes') startNextQuestion();
+}
+
+function switchTab(tab) {
+  if (tab !== activeTab && activeTab === 'editor' && hasUnsavedEditorChanges()) {
+    pendingTab = tab;
+    pendingEdAction = null;
+    document.getElementById('unsavedModal').classList.remove('hidden');
+    return;
+  }
+  applySwitchTab(tab);
+}
+
+function applySwitchTab(tab) {
+  activeTab = tab;
+  ['quiz','editor','cloud'].forEach((t, i) => {
+    const el = document.getElementById('tab-' + t);
+    if (el) el.classList.toggle('hidden', t !== tab);
+    const btn = document.querySelectorAll('.tab-btn')[i];
+    if (btn) btn.classList.toggle('active', t === tab);
+  });
+  if (tab === 'quiz') startNextQuestion();
+  if (tab === 'editor') renderEditorList();
+}
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+window.addEventListener('scroll', () => {
+  const btn = document.getElementById('scrollTopBtn');
+  if (btn) btn.classList.toggle('hidden', window.scrollY < 300);
+}, { passive: true });
+
+// === 3. ПОДБОР ПОХОЖИХ ВАРИАНТОВ (ДИСТРАКТОРОВ) ===
+function pickSmartDistractors(targetItem, count = 2, requirePhoto = true) {
+  let pool = items.filter(i => i.id !== targetItem.id && (!requirePhoto || i.img) && i.cat === targetItem.cat);
+  if (pool.length < count) {
+    pool = items.filter(i => i.id !== targetItem.id && (!requirePhoto || i.img));
+  }
+  if (pool.length <= count) return pool;
+
+  const targetWords = targetItem.ru.toLowerCase().replace(/[().,«»"-]/g, ' ').split(/\s+/).filter(w => w.length >= 4);
+  const scored = pool.map(cand => {
+    let score = 0;
+    if (cand.cat === targetItem.cat) score += 300;
+    const candLower = cand.ru.toLowerCase();
+    for (const w of targetWords) {
+      if (candLower.includes(w)) score += 180;
+    }
+    return { cand, score: score + Math.random() * 120 };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  const topPool = scored.slice(0, Math.min(count + 4, scored.length)).map(x => x.cand);
+  topPool.sort(() => Math.random() - 0.5);
+  return topPool.slice(0, count);
+}
+
+// === 4. СПРАВОЧНИК И ТРЕНАЖЕР ===
+function renderBrowseMode(sectionPool) {
+  const box = document.getElementById('quizContent');
+  if (!sectionPool.length) {
+    box.innerHTML = `<div style="text-align:center;padding:28px;color:var(--muted)">
+      <h3>База инструментов пока пуста</h3>
+      <p style="margin:8px 0 14px">${isVolunteer
+        ? 'Перейдите в «Редактор для добровольцев» и добавьте первые инструменты.'
+        : 'Добровольцы скоро наполнят базу инструментами.'}</p>
+      ${isVolunteer ? `<button class="btn" onclick="switchTab('editor')">Открыть редактор</button>` : ''}
+    </div>`;
+    return;
+  }
+  box.innerHTML = `
+    <div class="browse-bar">
+      <input type="text" id="browseSearchInput" value="${escHtml(browseSearch)}" placeholder="Поиск по названию, группе или примечанию..." oninput="browseSearch=this.value;updateBrowseGrid()" style="flex:1;min-width:220px">
+      <span id="browseCountLbl" style="font-size:0.84rem;color:var(--muted);font-weight:600"></span>
+    </div>
+    <div id="browseCardsGrid"></div>
+  `;
+  updateBrowseGrid(sectionPool);
+}
+
+function updateBrowseGrid(explicitPool) {
+  const grid = document.getElementById('browseCardsGrid');
+  if (!grid) return;
+  const cat = document.getElementById('quizCategory').value;
+  const basePool = explicitPool || items.filter(i => cat === 'ALL' || i.cat === cat);
+  const q = browseSearch.toLowerCase().trim();
+
+  const filtered = basePool.filter(i => {
+    if (!q) return true;
+    return i.ru.toLowerCase().includes(q)
+      || (i.cat || '').toLowerCase().includes(q)
+      || (i.note || '').toLowerCase().includes(q);
+  });
+
+  const lbl = document.getElementById('browseCountLbl');
+  if (lbl) lbl.textContent = `Показано: ${filtered.length} из ${basePool.length}`;
+
+  if (!filtered.length) {
+    grid.className = '';
+    grid.innerHTML = `<div style="text-align:center;padding:24px;color:var(--muted)"><h3>По запросу ничего не найдено</h3></div>`;
+    return;
+  }
+
+  grid.className = 'browse-grid';
+  grid.innerHTML = filtered.map(it => `
+    <div class="browse-card">
+      <div class="browse-img-wrap">
+        ${it.img
+          ? `<img src="${it.img}" loading="lazy" alt="${escHtml(it.ru)}" onclick="zoomImage('${it.id}', event)">
+             <button class="zoom-btn" onclick="zoomImage('${it.id}', event)">🔍 Лупа</button>`
+          : `<div class="browse-no-img">Фото пока не загружено</div>`}
+      </div>
+      <div class="browse-body">
+        <div class="browse-cat">${escHtml(it.cat)}</div>
+        <div class="browse-ru">${escHtml(it.ru)}</div>
+        ${it.note ? `<div class="browse-note">${escHtml(it.note)}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function startNextQuestion() {
+  const cat = document.getElementById('quizCategory').value;
+  const filter = document.getElementById('quizFilter').value;
+  const nameModeCol = document.getElementById('nameModeCol');
+  if (nameModeCol) {
+    nameModeCol.style.opacity = (filter === 'name' || filter === 'mistakes') ? '1' : '0.45';
+  }
+
+  let pool = items.filter(i => cat === 'ALL' || i.cat === cat);
+  const withPhotoCount = pool.filter(i => i.img).length;
+  document.getElementById('statWithPhoto').textContent = `${withPhotoCount} из ${pool.length}`;
+
+  if (filter === 'browse') {
+    renderBrowseMode(pool);
+    return;
+  }
+
+  if (filter === 'show' || filter === 'name') {
+    pool = pool.filter(i => i.img);
+  } else if (filter === 'mistakes') {
+    pool = pool.filter(i => mistakes.has(i.id));
+  }
+
+  const box = document.getElementById('quizContent');
+  if (!pool.length) {
+    if (filter === 'mistakes') {
+      box.innerHTML = `<div style="text-align:center;padding:24px;color:var(--muted)">
+        <h3>Список ошибок пуст!</h3>
+        <p style="margin:8px 0 14px">Вы разобрали все свои ошибки.</p>
+        <button class="btn" onclick="document.getElementById('quizFilter').value='name';startNextQuestion()">Перейти к тренажеру</button>
+      </div>`;
+    } else {
+      box.innerHTML = `<div style="text-align:center;padding:24px;color:var(--muted)">
+        <h3>В этой группе пока нет инструментов с фото</h3>
+        <p style="margin:8px 0 14px">${isVolunteer
+          ? 'Добавьте инструменты и загрузите фотографии в редакторе для добровольцев.'
+          : 'Выберите другую группу или откройте справочник.'}</p>
+        <div class="row" style="justify-content:center">
+          <button class="btn" onclick="document.getElementById('quizFilter').value='browse';startNextQuestion()">Открыть справочник</button>
+          ${isVolunteer ? `<button class="btn btn-sec" onclick="switchTab('editor')">Открыть редактор</button>` : ''}
+        </div>
+      </div>`;
+    }
+    return;
+  }
+
+  // Стараемся не повторять тот же самый инструмент два раза подряд, если в пуле > 1 элемента
+  let candidates = pool;
+  if (pool.length > 1 && currentQuizItem) {
+    candidates = pool.filter(i => i.id !== currentQuizItem.id);
+  }
+  currentQuizItem = candidates[Math.floor(Math.random() * candidates.length)];
+  quizQuestionAnswered = false;
+  showHadWrongAttempt = false;
+  lastAnswerWrong = false;
+
+  if (filter === 'show') {
+    const distractors = pickSmartDistractors(currentQuizItem, 2, true);
+    currentChoices = [currentQuizItem, ...distractors].sort(() => Math.random() - 0.5);
+  } else {
+    currentChoices = [currentQuizItem];
+  }
+
+  renderQuizArena();
+}
+
+function renderQuizArena() {
+  const filter = document.getElementById('quizFilter').value;
+  const box = document.getElementById('quizContent');
+
+  if (filter === 'show') {
+    let html = `
+      <div style="text-align:center"><span class="badge">${escHtml(currentQuizItem.cat)}</span></div>
+      <div class="quiz-title">${escHtml(currentQuizItem.ru)}</div>
+    `;
+    if (currentChoices.length > 1) {
+      html += `<div class="quiz-subtitle">Выберите правильное фото инструмента</div>
+      <div class="img-grid">
+        ${currentChoices.map((ch, idx) => `
+          <div class="img-choice" id="choice-${ch.id}" onclick="selectImageChoice('${ch.id}')">
+            <img src="${ch.img}" alt="Вариант ${idx + 1}">
+            <button class="zoom-btn" onclick="zoomImage('${ch.id}', event)">🔍 Лупа</button>
+          </div>
+        `).join('')}
+      </div>
+      <div id="showFeedback" style="max-width:650px;margin:0 auto"></div>`;
+    } else {
+      html += `<div class="quiz-subtitle">Для выбора из 3 фото нужно минимум 2 инструмента с фото в базе</div>
+      <div style="max-width:440px;margin:10px auto">
+        <div class="img-choice correct" style="cursor:default">
+          <img src="${currentQuizItem.img}" onclick="zoomImage('${currentQuizItem.id}', event)" style="cursor:zoom-in">
+          <button class="zoom-btn" onclick="zoomImage('${currentQuizItem.id}', event)">🔍 Лупа</button>
+        </div>
+      </div>
+      ${currentQuizItem.note ? `<div style="text-align:center;color:var(--muted);margin-bottom:12px">${escHtml(currentQuizItem.note)}</div>` : ''}
+      <div style="text-align:center"><button class="btn" onclick="startNextQuestion()">Следующий вопрос ➔</button></div>`;
+    }
+    box.innerHTML = html;
+    return;
+  }
+
+  // Режимы "name" и "mistakes"
+  box.innerHTML = `
+    <div style="text-align:center;margin-bottom:10px"><span class="badge">${escHtml(currentQuizItem.cat)}</span></div>
+    <div class="quiz-subtitle">Назовите хирургический инструмент на фото</div>
+    ${currentQuizItem.img
+      ? `<div style="max-width:480px;margin:0 auto 14px">
+          <div class="img-choice" style="cursor:default;border-color:var(--primary)">
+            <img src="${currentQuizItem.img}" onclick="zoomImage('${currentQuizItem.id}', event)" style="cursor:zoom-in">
+            <button class="zoom-btn" onclick="zoomImage('${currentQuizItem.id}', event)">🔍 Лупа</button>
+          </div>
+        </div>`
+      : `<div style="text-align:center;padding:18px;color:var(--muted);background:#f8fafc;border-radius:10px;margin-bottom:14px">Фото пока не загружено</div>`}
+    <div id="nameStepContainer"></div>
+  `;
+  renderNameStep();
+}
+
+function selectImageChoice(id) {
+  if (quizQuestionAnswered) return;
+  const el = document.getElementById('choice-' + id);
+  const fb = document.getElementById('showFeedback');
+
+  if (id === currentQuizItem.id) {
+    el.classList.add('correct');
+    quizQuestionAnswered = true;
+    if (!showHadWrongAttempt) {
+      recordResult(true);
+    }
+    fb.innerHTML = `
+      <div class="feedback ok">
+        ✅ Верно! <b>${escHtml(currentQuizItem.ru)}</b>
+        ${currentQuizItem.note ? `<div style="font-weight:400;margin-top:4px;font-size:0.9rem">${escHtml(currentQuizItem.note)}</div>` : ''}
+      </div>
+      <div style="margin-top:10px;text-align:center">
+        <button class="btn" onclick="startNextQuestion()">Следующий вопрос ➔</button>
+      </div>`;
+  } else {
+    if (!el.classList.contains('wrong')) {
+      el.classList.add('wrong');
+      if (!showHadWrongAttempt) {
+        showHadWrongAttempt = true;
+        recordResult(false);
+      }
+      const chosen = items.find(i => i.id === id);
+      fb.innerHTML = `<div class="feedback err">❌ Это не тот инструмент${chosen ? `: на этом фото — <b>${escHtml(chosen.ru)}</b>` : ''}. Попробуйте ещё раз!</div>`;
+    }
+  }
+}
+
+// === 5. ПРОВЕРКА НАЗВАНИЯ ИНСТРУМЕНТА ===
+function normalizeRu(str) {
+  return (str || '').toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/[«»"']/g, ' ')
+    .replace(/[^а-яa-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+}
+
+function isRussianNameMatch(userRaw, targetRaw) {
+  const user = normalizeRu(userRaw);
+  if (!user) return false;
+
+  const fullTarget = normalizeRu(targetRaw);
+  if (user === fullTarget) return true;
+
+  // Вариант без текста в скобках и вариант только из скобок (например: "Зажим Холстеда (Москит)")
+  const noParens = normalizeRu(targetRaw.replace(/\(.*?\)/g, ''));
+  if (noParens && user === noParens) return true;
+
+  const parenMatches = [...targetRaw.matchAll(/\((.*?)\)/g)].map(m => normalizeRu(m[1])).filter(Boolean);
+  for (const pm of parenMatches) {
+    if (user === pm) return true;
+  }
+
+  // Проверка совпадения по ключевым словам (если пользователь ввёл все значащие слова в другом порядке)
+  const uWords = user.split(' ').filter(w => w.length >= 2);
+  const tWords = noParens.split(' ').filter(w => w.length >= 2);
+  if (tWords.length > 0 && uWords.length === tWords.length) {
+    const tSet = new Set(tWords);
+    if (uWords.every(w => tSet.has(w))) return true;
+  }
+
+  return false;
+}
+
+function renderNameStep() {
+  const container = document.getElementById('nameStepContainer');
+  if (!container || !currentQuizItem) return;
+  const mode = document.getElementById('nameMode').value;
+
+  if (mode === 'input') {
+    container.innerHTML = `
+      <div class="answer-box">
+        <div style="font-weight:700;margin-bottom:8px">Введите название инструмента</div>
+        <div class="row">
+          <input type="text" id="nameInput" placeholder="Например: Зажим Кохера или Скальпель брюшистый..." onkeydown="if(event.key==='Enter')checkNameInput()" style="flex:1">
+          <button class="btn" onclick="checkNameInput()">Проверить</button>
+        </div>
+        <div id="nameFeedback"></div>
+      </div>
+    `;
+    setTimeout(() => { const inp = document.getElementById('nameInput'); if (inp) inp.focus(); }, 50);
+  } else if (mode === 'mc') {
+    const distractors = pickSmartDistractors(currentQuizItem, 3, false);
+    const opts = [currentQuizItem, ...distractors].sort(() => Math.random() - 0.5);
+    container.innerHTML = `
+      <div class="answer-box">
+        <div style="font-weight:700">Выберите верное название</div>
+        <div class="mc-grid">
+          ${opts.map(o => `<button class="mc-btn" id="mc-${o.id}" onclick="checkNameMC('${o.id}')">${escHtml(o.ru)}</button>`).join('')}
+        </div>
+        <div id="nameFeedback"></div>
+      </div>
+    `;
+  } else {
+    container.innerHTML = `
+      <div class="answer-box" style="text-align:center">
+        <button class="btn" onclick="revealFlashcard()">👁️ Показать ответ</button>
+        <div id="nameFeedback"></div>
+      </div>
+    `;
+  }
+}
+
+function checkNameInput() {
+  if (quizQuestionAnswered) return;
+  const inp = document.getElementById('nameInput');
+  if (!inp) return;
+  const fb = document.getElementById('nameFeedback');
+  quizQuestionAnswered = true;
+
+  if (isRussianNameMatch(inp.value, currentQuizItem.ru)) {
+    recordResult(true);
+    fb.innerHTML = `<div class="feedback ok">
+        ✅ Верно! <b>${escHtml(currentQuizItem.ru)}</b>
+        ${currentQuizItem.note ? `<div style="font-weight:400;margin-top:4px;font-size:0.9rem">${escHtml(currentQuizItem.note)}</div>` : ''}
+      </div>
+      <div style="margin-top:10px"><button class="btn" onclick="startNextQuestion()">Следующий вопрос ➔</button></div>`;
+  } else {
+    recordResult(false);
+    fb.innerHTML = `<div class="feedback err">
+        ❌ Не совпало. В базе: <b>${escHtml(currentQuizItem.ru)}</b>
+        ${currentQuizItem.note ? `<div style="font-weight:400;margin-top:4px;font-size:0.9rem">${escHtml(currentQuizItem.note)}</div>` : ''}
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" onclick="startNextQuestion()">Дальше ➔</button>
+        <button class="btn btn-warning" onclick="overrideAsCorrect()">✔️ Мой ответ был верным (засчитать)</button>
+      </div>`;
+  }
+}
+
+function checkNameMC(id) {
+  if (quizQuestionAnswered) return;
+  quizQuestionAnswered = true;
+  const btn = document.getElementById('mc-' + id);
+  const fb = document.getElementById('nameFeedback');
+
+  if (id === currentQuizItem.id) {
+    btn.classList.add('correct');
+    recordResult(true);
+    fb.innerHTML = `
+      ${currentQuizItem.note ? `<div class="feedback ok" style="font-weight:400;font-size:0.9rem">${escHtml(currentQuizItem.note)}</div>` : ''}
+      <div style="margin-top:10px"><button class="btn" onclick="startNextQuestion()">Следующий вопрос ➔</button></div>`;
+  } else {
+    btn.classList.add('wrong');
+    const rightBtn = document.getElementById('mc-' + currentQuizItem.id);
+    if (rightBtn) rightBtn.classList.add('correct');
+    recordResult(false);
+    fb.innerHTML = `
+      ${currentQuizItem.note ? `<div class="feedback err" style="font-weight:400;font-size:0.9rem"><b>${escHtml(currentQuizItem.ru)}</b>: ${escHtml(currentQuizItem.note)}</div>` : ''}
+      <div class="row" style="margin-top:10px">
+        <button class="btn" onclick="startNextQuestion()">Следующий вопрос ➔</button>
+        <button class="btn btn-warning" onclick="overrideAsCorrect()">✔️ Засчитать как верный</button>
+      </div>`;
+  }
+}
+
+function revealFlashcard() {
+  const fb = document.getElementById('nameFeedback');
+  fb.innerHTML = `<div class="feedback ok" style="font-size:1.1rem;margin-bottom:10px">
+      <b>${escHtml(currentQuizItem.ru)}</b>
+      ${currentQuizItem.note ? `<div style="font-weight:400;font-size:0.9rem;margin-top:4px">${escHtml(currentQuizItem.note)}</div>` : ''}
+    </div>
+    <div class="row" style="justify-content:center">
+      <button class="btn btn-success" onclick="recordResult(true);startNextQuestion()">👍 Знал</button>
+      <button class="btn btn-danger" onclick="recordResult(false);startNextQuestion()">👎 Повторить ещё</button>
+    </div>`;
+}
+
+function overrideAsCorrect() {
+  if (!lastAnswerWrong) return;
+  statWrong = Math.max(0, statWrong - 1);
+  statCorrect++;
+  mistakes.delete(currentQuizItem.id);
+  localStorage.setItem('surg_mistakes_v1', JSON.stringify([...mistakes]));
+  updateStatsUI();
+  startNextQuestion();
+}
+
+function recordResult(isOk) {
+  if (isOk) {
+    statCorrect++;
+    mistakes.delete(currentQuizItem.id);
+    lastAnswerWrong = false;
+  } else {
+    statWrong++;
+    mistakes.add(currentQuizItem.id);
+    lastAnswerWrong = true;
+  }
+  localStorage.setItem('surg_mistakes_v1', JSON.stringify([...mistakes]));
+  updateStatsUI();
+}
+
+function updateStatsUI() {
+  document.getElementById('statCorrect').textContent = statCorrect;
+  document.getElementById('statWrong').textContent = statWrong;
+  updateMistakesOption();
+}
+
+// === 4.5. ИНТЕРАКТИВНАЯ ЛУПА ===
+let zoomScale = 1, panX = 0, panY = 0;
+let isPanning = false, panStartX = 0, panStartY = 0, panMoved = false;
+let initialPinchDist = 0, initialPinchScale = 1, lastTapTime = 0;
+
+function zoomImage(id, e) {
+  if (e) e.stopPropagation();
+  const it = items.find(i => i.id === id);
+  if (!it || !it.img) return;
+  const img = document.getElementById('zoomImg');
+  img.src = it.img;
+  resetZoomTransform();
+  document.getElementById('zoomModal').classList.remove('hidden');
+}
+
+function closeZoomModal() {
+  document.getElementById('zoomModal').classList.add('hidden');
+  resetZoomTransform();
+  const vp = document.querySelector('meta[name="viewport"]');
+  if (vp) {
+    vp.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0');
+    setTimeout(() => { vp.setAttribute('content', 'width=device-width, initial-scale=1.0'); }, 60);
+  }
+}
+
+function applyZoomTransform() {
+  const img = document.getElementById('zoomImg');
+  if (!img) return;
+  img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomScale})`;
+  img.style.cursor = isPanning ? 'grabbing' : (zoomScale > 1 ? 'grab' : 'zoom-in');
+}
+
+function resetZoomTransform() {
+  zoomScale = 1; panX = 0; panY = 0; isPanning = false;
+  applyZoomTransform();
+}
+
+function stepZoom(delta) {
+  zoomScale = Math.min(5, Math.max(1, +(zoomScale + delta).toFixed(2)));
+  if (zoomScale === 1) { panX = 0; panY = 0; }
+  applyZoomTransform();
+}
+
+function setupInteractiveZoom() {
+  const modal = document.getElementById('zoomModal');
+  const vp = document.getElementById('zoomViewport');
+  const img = document.getElementById('zoomImg');
+  if (!modal || !vp || !img) return;
+
+  vp.addEventListener('click', e => {
+    if (e.target === vp && !panMoved) closeZoomModal();
+  });
+  window.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      if (!modal.classList.contains('hidden')) closeZoomModal();
+      const um = document.getElementById('unsavedModal');
+      if (um && !um.classList.contains('hidden')) resolveUnsavedModal('stay');
+      const cm = document.getElementById('clearMistakesModal');
+      if (cm && !cm.classList.contains('hidden')) closeClearMistakesModal();
+      const dm = document.getElementById('deleteItemModal');
+      if (dm && !dm.classList.contains('hidden')) closeDeleteItemModal();
+    }
+  });
+
+  vp.addEventListener('wheel', e => {
+    e.preventDefault();
+    stepZoom(e.deltaY < 0 ? 0.35 : -0.35);
+  }, { passive: false });
+
+  img.addEventListener('mousedown', e => {
+    e.preventDefault();
+    isPanning = true;
+    panMoved = false;
+    panStartX = e.clientX - panX;
+    panStartY = e.clientY - panY;
+    applyZoomTransform();
+  });
+
+  window.addEventListener('mousemove', e => {
+    if (!isPanning) return;
+    if (Math.abs(e.clientX - panStartX - panX) > 4 || Math.abs(e.clientY - panStartY - panY) > 4) {
+      panMoved = true;
+    }
+    if (zoomScale > 1) {
+      panX = e.clientX - panStartX;
+      panY = e.clientY - panStartY;
+      applyZoomTransform();
+    }
+  });
+
+  window.addEventListener('mouseup', e => {
+    if (!isPanning) return;
+    isPanning = false;
+    if (!panMoved && e.target === img) {
+      if (zoomScale === 1) {
+        const rect = img.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        zoomScale = 2.5;
+        panX = (cx - e.clientX) * 1.2;
+        panY = (cy - e.clientY) * 1.2;
+      } else {
+        zoomScale = 1; panX = 0; panY = 0;
+      }
+    }
+    applyZoomTransform();
+  });
+
+  vp.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      initialPinchDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      initialPinchScale = zoomScale;
+    } else if (e.touches.length === 1) {
+      const now = Date.now();
+      if (now - lastTapTime < 280) {
+        zoomScale = zoomScale > 1 ? 1 : 2.5;
+        panX = 0; panY = 0;
+        applyZoomTransform();
+      }
+      lastTapTime = now;
+      isPanning = true;
+      panStartX = e.touches[0].clientX - panX;
+      panStartY = e.touches[0].clientY - panY;
+    }
+  }, { passive: true });
+
+  vp.addEventListener('touchmove', e => {
+    if (e.touches.length === 2 && initialPinchDist > 0) {
+      e.preventDefault();
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      zoomScale = Math.min(5, Math.max(1, initialPinchScale * (dist / initialPinchDist)));
+      if (zoomScale === 1) { panX = 0; panY = 0; }
+      applyZoomTransform();
+    } else if (e.touches.length === 1 && isPanning && zoomScale > 1) {
+      e.preventDefault();
+      panX = e.touches[0].clientX - panStartX;
+      panY = e.touches[0].clientY - panStartY;
+      applyZoomTransform();
+    }
+  }, { passive: false });
+
+  vp.addEventListener('touchend', () => { isPanning = false; initialPinchDist = 0; });
+}
+
+// === 6. РЕДАКТОР ДЛЯ ДОБРОВОЛЬЦЕВ ===
+const canvas = document.getElementById('edCanvas');
+const ctx = canvas.getContext('2d');
+const annotCanvas = document.createElement('canvas');
+const annotCtx = annotCanvas.getContext('2d');
+let baseImage = null;
+let shapes = [];
+let currentTool = 'blackbox';
+let isDrawing = false, startX = 0, startY = 0, currentPath = [];
+
+function getToolCfg(t) {
+  return toolSettings[t] || DEFAULT_TOOL_SETTINGS[t] || { color: '#ef4444', width: 4 };
+}
+function getActiveToolColor() { return getToolCfg(currentTool).color; }
+function getActiveToolWidth() { return getToolCfg(currentTool).width; }
+
+function syncStylePanelUI() {
+  const colInp = document.getElementById('toolColorInput');
+  const widInp = document.getElementById('toolWidthInput');
+  const widLbl = document.getElementById('toolWidthLabel');
+  const colWrap = document.getElementById('colorControlWrap');
+  if (!colInp || !widInp) return;
+
+  const isEraser = currentTool === 'eraser';
+  if (colWrap) colWrap.style.opacity = isEraser ? '0.4' : '1';
+  colInp.disabled = isEraser;
+
+  const col = getActiveToolColor();
+  const wid = getActiveToolWidth();
+  colInp.value = col;
+  widInp.value = wid;
+  widLbl.textContent = wid + ' px';
+  document.querySelectorAll('#colorSwatches .swatch').forEach(sw => {
+    sw.classList.toggle('active', !isEraser && sw.getAttribute('onclick').includes(col.toLowerCase()));
+  });
+}
+
+function onToolStyleChange() {
+  const col = document.getElementById('toolColorInput').value;
+  const wid = parseInt(document.getElementById('toolWidthInput').value, 10) || 4;
+  if (!toolSettings[currentTool]) {
+    toolSettings[currentTool] = Object.assign({}, getToolCfg(currentTool));
+  }
+  if (currentTool !== 'eraser') toolSettings[currentTool].color = col;
+  toolSettings[currentTool].width = wid;
+  localStorage.setItem('surg_tool_settings_v1', JSON.stringify(toolSettings));
+  syncStylePanelUI();
+}
+
+function pickSwatch(hex) {
+  if (currentTool === 'eraser') return;
+  const colInp = document.getElementById('toolColorInput');
+  if (colInp) {
+    colInp.value = hex;
+    onToolStyleChange();
+  }
+}
+
+function resetToolSettingsToDefault() {
+  const fresh = {};
+  for (const [k, def] of Object.entries(DEFAULT_TOOL_SETTINGS)) {
+    fresh[k] = Object.assign({}, def);
+  }
+  toolSettings = fresh;
+  localStorage.setItem('surg_tool_settings_v1', JSON.stringify(toolSettings));
+  syncStylePanelUI();
+}
+
+function setTool(t) {
+  currentTool = t;
+  ['blackbox','blackpen','eraser','line','circle','arrow'].forEach(id => {
+    const el = document.getElementById('tool-' + id);
+    if (el) el.classList.toggle('active', id === t);
+  });
+  syncStylePanelUI();
+}
+
+function renderEditorList() {
+  const cat = document.getElementById('edCategory').value;
+  const q = document.getElementById('edSearch').value.toLowerCase().trim();
+  const st = document.getElementById('edStatusFilter').value;
+
+  const doneCount = items.filter(i => i.img).length;
+  document.getElementById('progressCount').textContent = `${doneCount} / ${items.length} с фото`;
+
+  const filtered = items.filter(i => {
+    if (cat !== 'ALL' && i.cat !== cat) return false;
+    if (st === 'missing' && i.img) return false;
+    if (st === 'done' && !i.img) return false;
+    if (q && !i.ru.toLowerCase().includes(q) && !(i.cat || '').toLowerCase().includes(q) && !(i.note || '').toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  const listEl = document.getElementById('structList');
+  if (!filtered.length) {
+    listEl.innerHTML = `<div style="padding:18px;text-align:center;color:var(--muted);font-size:0.88rem">
+      ${items.length ? 'Ничего не найдено' : 'Список пуст. Заполните поля справа и нажмите «Сохранить карточку».'}
+    </div>`;
+    return;
+  }
+
+  listEl.innerHTML = filtered.map(i => `
+    <div class="struct-item ${i.id === currentEdId ? 'active' : ''}" onclick="selectItemForEdit('${i.id}')">
+      <div>
+        <div>${escHtml(i.ru)}</div>
+        <div style="font-size:0.76rem;color:var(--muted)">${escHtml(i.cat)}</div>
+      </div>
+      <span class="status-dot ${i.img ? 'dot-yes' : 'dot-no'}" title="${i.img ? 'Фото загружено' : 'Без фото'}"></span>
+    </div>
+  `).join('');
+}
+
+function hasUnsavedEditorChanges() {
+  const ruVal = (document.getElementById('edItemRu')?.value || '').trim();
+  const catVal = (document.getElementById('edItemCat')?.value || '').trim();
+  const noteVal = (document.getElementById('edItemNote')?.value || '').trim();
+  const shapesChanged = JSON.stringify(shapes) !== edSavedShapesJson;
+
+  if (currentEdId === '__NEW__') {
+    return Boolean(ruVal || noteVal || edBaseChanged || shapesChanged);
+  }
+  const it = items.find(i => i.id === currentEdId);
+  if (!it) return false;
+  return ruVal !== (it.ru || '').trim()
+    || catVal !== (it.cat || '').trim()
+    || noteVal !== (it.note || '').trim()
+    || edBaseChanged
+    || shapesChanged;
+}
+
+function startNewInstrument() {
+  if (hasUnsavedEditorChanges()) {
+    pendingEdAction = { type: 'new' };
+    pendingTab = null;
+    document.getElementById('unsavedModal').classList.remove('hidden');
+    return;
+  }
+  applyNewInstrumentForm();
+}
+
+function applyNewInstrumentForm() {
+  currentEdId = '__NEW__';
+  edBaseChanged = false;
+  edSavedShapesJson = '[]';
+  const curFilterCat = document.getElementById('edCategory')?.value;
+  document.getElementById('edModeBadge').textContent = '➕ Новый инструмент';
+  document.getElementById('edValidationMsg').textContent = '';
+  document.getElementById('edItemRu').value = '';
+  document.getElementById('edItemCat').value = (curFilterCat && curFilterCat !== 'ALL') ? curFilterCat : '';
+  document.getElementById('edItemNote').value = '';
+  document.getElementById('deletePhotoBtn').classList.add('hidden');
+  document.getElementById('deleteItemBtn').classList.add('hidden');
+  baseImage = null;
+  shapes = [];
+  redrawCanvas();
+  renderEditorList();
+  setTimeout(() => document.getElementById('edItemRu')?.focus(), 40);
+}
+
+function selectItemForEdit(id) {
+  if (id === currentEdId) return;
+  if (hasUnsavedEditorChanges()) {
+    pendingEdAction = { type: 'select', id };
+    pendingTab = null;
+    document.getElementById('unsavedModal').classList.remove('hidden');
+    return;
+  }
+  applySelectItemForEdit(id);
+}
+
+async function resolveUnsavedModal(action) {
+  const modal = document.getElementById('unsavedModal');
+  if (modal) modal.classList.add('hidden');
+  const edAct = pendingEdAction;
+  const targetTab = pendingTab;
+  pendingEdAction = null;
+  pendingTab = null;
+
+  if (action === 'stay' || (!edAct && !targetTab)) return;
+  if (action === 'save') {
+    const ok = await saveCurrentCard();
+    if (!ok) return;
+  } else if (action === 'discard' && targetTab) {
+    if (currentEdId === '__NEW__') applyNewInstrumentForm();
+    else applySelectItemForEdit(currentEdId);
+  }
+  if (edAct) {
+    if (edAct.type === 'new') applyNewInstrumentForm();
+    else if (edAct.type === 'select') applySelectItemForEdit(edAct.id);
+  }
+  if (targetTab) applySwitchTab(targetTab);
+}
+
+function applySelectItemForEdit(id) {
+  const it = items.find(i => i.id === id);
+  if (!it) {
+    applyNewInstrumentForm();
+    return;
+  }
+  currentEdId = id;
+  edBaseChanged = false;
+  edSavedShapesJson = '[]';
+  document.getElementById('edModeBadge').textContent = '✏️ Редактирование карточки';
+  document.getElementById('edValidationMsg').textContent = '';
+  document.getElementById('edItemRu').value = it.ru || '';
+  document.getElementById('edItemCat').value = it.cat || '';
+  document.getElementById('edItemNote').value = it.note || '';
+  document.getElementById('deletePhotoBtn').classList.toggle('hidden', !it.img);
+  document.getElementById('deleteItemBtn').classList.remove('hidden');
+  shapes = [];
+  if (it.img) {
+    loadImageToCanvas(it.img, false);
+  } else {
+    baseImage = null;
+    redrawCanvas();
+  }
+  renderEditorList();
+}
+
+function loadImageToCanvas(src, markDirty = false) {
+  const img = new Image();
+  img.onload = () => {
+    const maxW = 800, maxH = 600;
+    let w = img.width, h = img.height;
+    const ratio = Math.min(maxW / w, maxH / h, 1);
+    canvas.width = Math.round(w * ratio);
+    canvas.height = Math.round(h * ratio);
+    annotCanvas.width = canvas.width;
+    annotCanvas.height = canvas.height;
+    baseImage = img;
+    shapes = [];
+    if (markDirty) edBaseChanged = true;
+    redrawCanvas();
+  };
+  img.src = src;
+}
+
+function redrawCanvas(previewShape) {
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  if (!baseImage) {
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Загрузите фото, распакуйте PPTX/PDF или нажмите Ctrl+V', canvas.width / 2, canvas.height / 2);
+    return;
+  }
+  ctx.drawImage(baseImage, 0, 0, canvas.width, canvas.height);
+
+  if (annotCanvas.width !== canvas.width || annotCanvas.height !== canvas.height) {
+    annotCanvas.width = canvas.width;
+    annotCanvas.height = canvas.height;
+  }
+  annotCtx.clearRect(0, 0, annotCanvas.width, annotCanvas.height);
+  for (const s of shapes) drawShape(annotCtx, s);
+  if (previewShape) drawShape(annotCtx, previewShape);
+  ctx.drawImage(annotCanvas, 0, 0);
+}
+
+function drawShape(targetCtx, s) {
+  targetCtx.save();
+  const defCfg = DEFAULT_TOOL_SETTINGS[s.type] || { color: '#ef4444', width: 4 };
+  const col = s.color || defCfg.color;
+  const wid = s.width || defCfg.width;
+
+  if (s.type === 'blackbox') {
+    targetCtx.fillStyle = col;
+    targetCtx.fillRect(s.x, s.y, s.w, s.h);
+  } else if (s.type === 'blackpen' || s.type === 'eraser') {
+    if (s.type === 'eraser') {
+      targetCtx.globalCompositeOperation = 'destination-out';
+      targetCtx.strokeStyle = 'rgba(0,0,0,1)';
+    } else {
+      targetCtx.strokeStyle = col;
+    }
+    targetCtx.lineWidth = wid;
+    targetCtx.lineCap = 'round';
+    targetCtx.lineJoin = 'round';
+    targetCtx.beginPath();
+    s.pts.forEach((p, idx) => idx === 0 ? targetCtx.moveTo(p.x, p.y) : targetCtx.lineTo(p.x, p.y));
+    if (s.pts.length === 1) targetCtx.lineTo(s.pts[0].x + 0.1, s.pts[0].y);
+    targetCtx.stroke();
+  } else if (s.type === 'line') {
+    targetCtx.strokeStyle = col;
+    targetCtx.lineWidth = wid;
+    targetCtx.lineCap = 'round';
+    targetCtx.beginPath();
+    targetCtx.moveTo(s.x1, s.y1);
+    targetCtx.lineTo(s.x2, s.y2);
+    targetCtx.stroke();
+  } else if (s.type === 'circle') {
+    targetCtx.strokeStyle = col;
+    targetCtx.lineWidth = wid;
+    targetCtx.beginPath();
+    const rx = Math.abs(s.w) / 2, ry = Math.abs(s.h) / 2;
+    targetCtx.ellipse(s.x + s.w / 2, s.y + s.h / 2, rx, ry, 0, 0, Math.PI * 2);
+    targetCtx.stroke();
+  } else if (s.type === 'arrow') {
+    targetCtx.strokeStyle = col;
+    targetCtx.fillStyle = col;
+    targetCtx.lineWidth = wid;
+    targetCtx.lineCap = 'round';
+    const headlen = Math.max(12, wid * 3.5);
+    const angle = Math.atan2(s.y2 - s.y1, s.x2 - s.x1);
+    const len = Math.hypot(s.x2 - s.x1, s.y2 - s.y1);
+    if (len > headlen * 0.75) {
+      targetCtx.beginPath();
+      targetCtx.moveTo(s.x1, s.y1);
+      targetCtx.lineTo(s.x2 - headlen * 0.75 * Math.cos(angle), s.y2 - headlen * 0.75 * Math.sin(angle));
+      targetCtx.stroke();
+    }
+    targetCtx.beginPath();
+    targetCtx.moveTo(s.x2, s.y2);
+    targetCtx.lineTo(s.x2 - headlen * Math.cos(angle - Math.PI / 6), s.y2 - headlen * Math.sin(angle - Math.PI / 6));
+    targetCtx.lineTo(s.x2 - headlen * Math.cos(angle + Math.PI / 6), s.y2 - headlen * Math.sin(angle + Math.PI / 6));
+    targetCtx.closePath();
+    targetCtx.fill();
+  }
+  targetCtx.restore();
+}
+
+function getCanvasCoords(e) {
+  const rect = canvas.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return {
+    x: (clientX - rect.left) * (canvas.width / rect.width),
+    y: (clientY - rect.top) * (canvas.height / rect.height)
+  };
+}
+
+canvas.addEventListener('pointerdown', e => {
+  if (!baseImage) return;
+  isDrawing = true;
+  const pos = getCanvasCoords(e);
+  startX = pos.x; startY = pos.y;
+  if (currentTool === 'blackpen' || currentTool === 'eraser') {
+    currentPath = [{ x: startX, y: startY }];
+    redrawCanvas({ type: currentTool, pts: currentPath, color: getActiveToolColor(), width: getActiveToolWidth() });
+  }
+});
+
+canvas.addEventListener('pointermove', e => {
+  if (!isDrawing || !baseImage) return;
+  const pos = getCanvasCoords(e);
+  const col = getActiveToolColor();
+  const wid = getActiveToolWidth();
+  if (currentTool === 'blackbox' || currentTool === 'circle') {
+    redrawCanvas({ type: currentTool, x: startX, y: startY, w: pos.x - startX, h: pos.y - startY, color: col, width: wid });
+  } else if (currentTool === 'arrow' || currentTool === 'line') {
+    redrawCanvas({ type: currentTool, x1: startX, y1: startY, x2: pos.x, y2: pos.y, color: col, width: wid });
+  } else if (currentTool === 'blackpen' || currentTool === 'eraser') {
+    currentPath.push(pos);
+    redrawCanvas({ type: currentTool, pts: currentPath, color: col, width: wid });
+  }
+});
+
+window.addEventListener('pointerup', e => {
+  if (!isDrawing) return;
+  isDrawing = false;
+  const pos = getCanvasCoords(e);
+  const col = getActiveToolColor();
+  const wid = getActiveToolWidth();
+  const moved = Math.hypot(pos.x - startX, pos.y - startY);
+
+  if (currentTool === 'blackbox' || currentTool === 'circle') {
+    if (moved >= 3) shapes.push({ type: currentTool, x: startX, y: startY, w: pos.x - startX, h: pos.y - startY, color: col, width: wid });
+  } else if (currentTool === 'arrow' || currentTool === 'line') {
+    if (moved >= 3) shapes.push({ type: currentTool, x1: startX, y1: startY, x2: pos.x, y2: pos.y, color: col, width: wid });
+  } else if (currentTool === 'blackpen' || currentTool === 'eraser') {
+    shapes.push({ type: currentTool, pts: currentPath, color: col, width: wid });
+  }
+  redrawCanvas();
+});
+
+function undoCanvas() { shapes.pop(); redrawCanvas(); }
+function clearAnnotations() { shapes = []; redrawCanvas(); }
+
+function handleImageUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => loadImageToCanvas(ev.target.result, true);
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+window.addEventListener('paste', e => {
+  if (activeTab !== 'editor') return;
+  const itemsClip = (e.clipboardData || e.originalEvent.clipboardData)?.items || [];
+  for (const item of itemsClip) {
+    if (item.type.indexOf('image') === 0) {
+      const blob = item.getAsFile();
+      const reader = new FileReader();
+      reader.onload = ev => loadImageToCanvas(ev.target.result, true);
+      reader.readAsDataURL(blob);
+    }
+  }
+});
+
+async function handlePptxUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const strip = document.getElementById('mediaStrip');
+  document.getElementById('extractedBox').classList.remove('hidden');
+  document.getElementById('pdfPager').classList.add('hidden');
+  strip.innerHTML = '<span>Распаковка презентации...</span>';
+  try {
+    const zip = await JSZip.loadAsync(file);
+    const mediaFiles = Object.keys(zip.files).filter(k => k.startsWith('ppt/media/') && /\.(png|jpe?g|gif|webp)$/i.test(k));
+    strip.innerHTML = '';
+    for (const path of mediaFiles) {
+      const base64 = await zip.files[path].async('base64');
+      const ext = path.split('.').pop().toLowerCase();
+      const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
+      const dataUrl = `data:${mime};base64,${base64}`;
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      img.className = 'media-thumb';
+      img.onclick = () => loadImageToCanvas(dataUrl, true);
+      strip.appendChild(img);
+    }
+    if (!mediaFiles.length) strip.innerHTML = '<span>В презентации не найдено картинок.</span>';
+  } catch (err) {
+    strip.innerHTML = '<span>Ошибка чтения PPTX.</span>';
+  }
+  e.target.value = '';
+}
+
+let currentPdfDoc = null, currentPdfPage = 1;
+async function handlePdfUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const arrayBuffer = await file.arrayBuffer();
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  currentPdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  currentPdfPage = 1;
+  document.getElementById('extractedBox').classList.remove('hidden');
+  document.getElementById('pdfPager').classList.remove('hidden');
+  document.getElementById('mediaStrip').innerHTML = '';
+  renderPdfPageToCanvas();
+  e.target.value = '';
+}
+
+async function renderPdfPageToCanvas() {
+  if (!currentPdfDoc) return;
+  document.getElementById('pdfPageInfo').textContent = `${currentPdfPage} / ${currentPdfDoc.numPages}`;
+  const page = await currentPdfDoc.getPage(currentPdfPage);
+  const viewport = page.getViewport({ scale: 1.5 });
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = viewport.width;
+  tempCanvas.height = viewport.height;
+  await page.render({ canvasContext: tempCanvas.getContext('2d'), viewport }).promise;
+  loadImageToCanvas(tempCanvas.toDataURL('image/jpeg', 0.85), true);
+}
+
+function changePdfPage(delta) {
+  if (!currentPdfDoc) return;
+  const next = currentPdfPage + delta;
+  if (next >= 1 && next <= currentPdfDoc.numPages) {
+    currentPdfPage = next;
+    renderPdfPageToCanvas();
+  }
+}
+function takeCurrentPdfPage() { renderPdfPageToCanvas(); }
+
+async function saveCurrentCard() {
+  const ru = document.getElementById('edItemRu').value.trim();
+  const cat = document.getElementById('edItemCat').value.trim() || 'Общие';
+  const note = document.getElementById('edItemNote').value.trim();
+  const valMsg = document.getElementById('edValidationMsg');
+
+  if (!ru) {
+    valMsg.textContent = 'Введите название инструмента!';
+    document.getElementById('edItemRu').focus();
+    return false;
+  }
+  valMsg.textContent = '';
+
+  let it;
+  if (currentEdId === '__NEW__') {
+    it = {
+      id: 'inst_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      cat,
+      ru,
+      note,
+      img: baseImage ? canvas.toDataURL('image/jpeg', 0.75) : null,
+      createdAt: Date.now()
+    };
+    items.push(it);
+    currentEdId = it.id;
+  } else {
+    it = items.find(i => i.id === currentEdId);
+    if (!it) return false;
+    it.ru = ru;
+    it.cat = cat;
+    it.note = note;
+    if (baseImage) {
+      it.img = canvas.toDataURL('image/jpeg', 0.75);
+    }
+  }
+
+  document.getElementById('edModeBadge').textContent = '✏️ Редактирование карточки';
+  document.getElementById('deletePhotoBtn').classList.toggle('hidden', !it.img);
+  document.getElementById('deleteItemBtn').classList.remove('hidden');
+
+  edBaseChanged = false;
+  edSavedShapesJson = JSON.stringify(shapes);
+  saveLocal();
+  populateCategorySelects();
+  renderEditorList();
+
+  const saveBtn = document.getElementById('saveCardBtn');
+  if (saveBtn) {
+    const oldText = '💾 Сохранить карточку (в базу и облако)';
+    saveBtn.innerHTML = '✅ Сохранено!';
+    setTimeout(() => { saveBtn.innerHTML = oldText; }, 1200);
+  }
+
+  if (firebaseUrl) {
+    await pushItemToFirebase(it);
+  }
+  return true;
+}
+
+async function deleteCurrentPhoto() {
+  const it = items.find(i => i.id === currentEdId);
+  if (!it) return;
+  it.img = null;
+  baseImage = null;
+  shapes = [];
+  edBaseChanged = false;
+  edSavedShapesJson = '[]';
+  document.getElementById('deletePhotoBtn').classList.add('hidden');
+  redrawCanvas();
+  saveLocal();
+  renderEditorList();
+  if (firebaseUrl) await pushItemToFirebase(it);
+}
+
+function openDeleteItemModal() {
+  const it = items.find(i => i.id === currentEdId);
+  if (!it) return;
+  document.getElementById('deleteItemModalText').innerHTML =
+    `Карточка <b>«${escHtml(it.ru)}»</b> будет безвозвратно удалена из базы${firebaseUrl ? ' и облака' : ''}.`;
+  document.getElementById('deleteItemModal').classList.remove('hidden');
+}
+
+function closeDeleteItemModal() {
+  document.getElementById('deleteItemModal').classList.add('hidden');
+}
+
+async function confirmDeleteCurrentItem() {
+  closeDeleteItemModal();
+  const idToDelete = currentEdId;
+  if (!idToDelete || idToDelete === '__NEW__') return;
+
+  items = items.filter(i => i.id !== idToDelete);
+  mistakes.delete(idToDelete);
+  localStorage.setItem('surg_mistakes_v1', JSON.stringify([...mistakes]));
+  saveLocal();
+  populateCategorySelects();
+
+  if (firebaseUrl) {
+    try {
+      await fetch(`${firebaseUrl}/cards/${idToDelete}.json`, { method: 'DELETE' });
+    } catch (e) {}
+  }
+
+  if (items.length) {
+    applySelectItemForEdit(items[0].id);
+  } else {
+    applyNewInstrumentForm();
+  }
+  renderEditorList();
+}
+
+// === 7. ОБЛАЧНАЯ СИНХРОНИЗАЦИЯ (FIREBASE) ===
+async function connectFirebase() {
+  const val = document.getElementById('firebaseUrlInput').value.trim().replace(/\/+$/, '');
+  if (!val.startsWith('https://')) {
+    alert('Введите корректную ссылку Firebase (начинается с https://)');
+    return;
+  }
+  firebaseUrl = val;
+  localStorage.setItem('surg_fb_url_v1', firebaseUrl);
+  await syncFromFirebase(true);
+}
+
+async function syncFromFirebase(mergeLocalToCloud = false) {
+  const badge = document.getElementById('cloudBadge');
+  const msg = document.getElementById('cloudStatusMsg');
+  try {
+    badge.textContent = 'Синхронизация...';
+    const res = await fetch(`${firebaseUrl}/cards.json`);
+    if (!res.ok) throw new Error('Ошибка доступа к БД');
+    const cloudData = await res.json();
+
+    const cloudList = [];
+    if (cloudData && typeof cloudData === 'object') {
+      for (const [id, data] of Object.entries(cloudData)) {
+        if (!data || !data.ru) continue;
+        cloudList.push({
+          id,
+          cat: data.cat || 'Общие',
+          ru: data.ru,
+          note: data.note || '',
+          img: data.img || null,
+          createdAt: data.createdAt || 0
+        });
+      }
+      cloudList.sort((a, b) => (a.createdAt - b.createdAt) || a.ru.localeCompare(b.ru, 'ru'));
+    }
+
+    if (mergeLocalToCloud) {
+      // При ручном подключении добавляем в облако те локальные карточки, которых там ещё нет
+      const merged = [...cloudList];
+      for (const loc of items) {
+        const exists = merged.some(c => c.id === loc.id || (c.cat === loc.cat && c.ru.trim().toLowerCase() === loc.ru.trim().toLowerCase()));
+        if (!exists) {
+          merged.push(loc);
+          await pushItemToFirebase(loc);
+        }
+      }
+      items = merged;
+    } else if (cloudData !== null) {
+      // При обычной загрузке облако — источник истины (удалённые карточки исчезают у всех)
+      items = cloudList;
+    }
+
+    saveLocal();
+    populateCategorySelects();
+
+    if (currentEdId !== '__NEW__' && !items.some(i => i.id === currentEdId)) {
+      if (items.length) applySelectItemForEdit(items[0].id);
+      else applyNewInstrumentForm();
+    } else if (currentEdId === '__NEW__' && !hasUnsavedEditorChanges() && items.length) {
+      applySelectItemForEdit(items[0].id);
+    }
+
+    renderEditorList();
+    if (activeTab === 'quiz') startNextQuestion();
+
+    badge.textContent = '☁️ Облако подключено';
+    badge.style.background = '#dcfce7';
+    badge.style.color = '#166534';
+    if (msg) msg.textContent = `✅ Облако синхронизировано! В базе инструментов: ${items.length}`;
+  } catch (e) {
+    badge.textContent = 'Ошибка облака';
+    if (msg) msg.textContent = '❌ Не удалось подключиться. Проверьте ссылку и правила доступа (Test Mode) в Firebase.';
+  }
+}
+
+async function pushItemToFirebase(it) {
+  if (!firebaseUrl) return;
+  try {
+    await fetch(`${firebaseUrl}/cards/${it.id}.json`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cat: it.cat,
+        ru: it.ru,
+        note: it.note || '',
+        img: it.img || null,
+        createdAt: it.createdAt || Date.now()
+      })
+    });
+  } catch (e) {}
+}
+
+function copyVolunteerLink() {
+  if (!firebaseUrl) {
+    alert('Сначала вставьте URL облака Firebase и нажмите «Подключить»');
+    return;
+  }
+  const url = new URL(window.location.href);
+  url.searchParams.set('db', firebaseUrl);
+  navigator.clipboard.writeText(url.toString());
+  alert('Ссылка для добровольцев скопирована в буфер обмена!');
+}
+
+// === 8. АВТОНОМНОЕ СКАЧИВАНИЕ HTML И РЕЗЕРВНЫЕ КОПИИ ===
+function downloadStandaloneHtml() {
+  const packed = {};
+  for (const it of items) {
+    if (!packed[it.cat]) packed[it.cat] = [];
+    packed[it.cat].push([it.ru, it.note || '', it.img || null]);
+  }
+
+  const clone = document.documentElement.cloneNode(true);
+  ['structList', 'quizContent', 'mistakesDrawer', 'mediaStrip', 'categorySuggestions'].forEach(id => {
+    const el = clone.querySelector('#' + id);
+    if (el) el.innerHTML = '';
+  });
+  ['mistakesDrawer', 'extractedBox', 'zoomModal', 'unsavedModal', 'clearMistakesModal', 'deleteItemModal', 'scrollTopBtn'].forEach(id => {
+    const el = clone.querySelector('#' + id);
+    if (el) el.classList.add('hidden');
+  });
+
+  ['quiz','editor','cloud'].forEach((t, i) => {
+    const tabEl = clone.querySelector('#tab-' + t);
+    if (tabEl) tabEl.classList.toggle('hidden', t !== 'quiz');
+    const btns = clone.querySelectorAll('.tab-btn');
+    if (btns[i]) {
+      btns[i].classList.toggle('active', t === 'quiz');
+      btns[i].style.display = '';
+    }
+  });
+  const btns = clone.querySelectorAll('.tab-btn');
+  if (btns[2]) btns[2].textContent = 'Облако и Скачивание HTML';
+  clone.querySelectorAll('#tab-cloud .card').forEach(c => {
+    c.style.display = '';
+    c.querySelectorAll('.btn-sec').forEach(b => b.style.display = '');
+  });
+
+  let htmlSource = clone.outerHTML;
+  const sTag = '/*' + '__DB_START__' + '*/';
+  const eTag = '/*' + '__DB_END__' + '*/';
+  const replacement = `${sTag}\nconst SAVED_FIREBASE_URL = ${JSON.stringify(firebaseUrl || '')};\nconst INITIAL_COMPACT_DB = ${JSON.stringify(packed)};\n${eTag}`;
+  const regex = new RegExp('\\/\\*__DB_START__\\*\\/[\\s\\S]*?\\/\\*__DB_END__\\*\\/');
+  htmlSource = '<!DOCTYPE html>\n' + htmlSource.replace(regex, replacement);
+
+  const blob = new Blob([htmlSource], { type: 'text/html;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'index.html';
+  a.click();
+}
+
+function exportJsonBackup() {
+  const blob = new Blob([JSON.stringify(items)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'surgical_instruments_backup.json';
+  a.click();
+}
+
+async function importJsonBackup(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async ev => {
+    try {
+      const imported = JSON.parse(ev.target.result);
+      let added = 0;
+      for (const inc of imported) {
+        if (!inc || !inc.ru) continue;
+        const match = items.find(i => (i.ru === inc.ru && i.cat === inc.cat) || i.id === inc.id);
+        if (match) {
+          if (inc.img) match.img = inc.img;
+          if (inc.note) match.note = inc.note;
+          if (firebaseUrl) await pushItemToFirebase(match);
+          added++;
+        } else {
+          const newIt = {
+            id: inc.id || ('inst_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6)),
+            cat: inc.cat || 'Общие',
+            ru: inc.ru,
+            note: inc.note || '',
+            img: inc.img || null,
+            createdAt: inc.createdAt || Date.now()
+          };
+          items.push(newIt);
+          if (firebaseUrl) await pushItemToFirebase(newIt);
+          added++;
+        }
+      }
+      saveLocal();
+      populateCategorySelects();
+      renderEditorList();
+      alert('Импорт завершен! Обновлено/добавлено карточек: ' + added);
+    } catch (err) { alert('Ошибка чтения файла JSON'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+async function importBulkText() {
+  const raw = document.getElementById('bulkInput').value.trim();
+  if (!raw) return;
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  const fallbackCat = document.getElementById('edCategory').value === 'ALL' ? 'Общие' : document.getElementById('edCategory').value;
+  let count = 0;
+  const baseTs = Date.now();
+
+  for (const line of lines) {
+    const parts = line.split('|').map(s => s.trim()).filter(Boolean);
+    let cat = fallbackCat, ru = '', note = '';
+    if (parts.length >= 3) {
+      cat = parts[0]; ru = parts[1]; note = parts.slice(2).join(' | ');
+    } else if (parts.length === 2) {
+      cat = parts[0]; ru = parts[1];
+    } else if (parts.length === 1) {
+      ru = parts[0];
+    }
+    if (!ru) continue;
+
+    const newIt = {
+      id: 'inst_' + baseTs + '_' + count + '_' + Math.random().toString(36).slice(2, 5),
+      cat,
+      ru,
+      note,
+      img: null,
+      createdAt: baseTs + count
+    };
+    items.push(newIt);
+    if (firebaseUrl) await pushItemToFirebase(newIt);
+    count++;
+  }
+
+  saveLocal();
+  populateCategorySelects();
+  renderEditorList();
+  document.getElementById('bulkInput').value = '';
+  const st = document.getElementById('bulkStatusMsg');
+  if (st) {
+    st.textContent = `✅ Добавлено инструментов: ${count}`;
+    setTimeout(() => { st.textContent = ''; }, 3000);
+  }
+}
+
+window.addEventListener('DOMContentLoaded', initDatabase);
+</script>
+</body>
+</html>
